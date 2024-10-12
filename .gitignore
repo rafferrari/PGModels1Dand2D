@@ -1,0 +1,26 @@
+# ignore data files
+*.dat
+*.npz
+*.h5
+*.msh
+*.txt
+*.vtu
+*.pvsm
+*.csv
+*.pvd
+*.out
+*.err
+
+# ignore images and videos
+*.png
+*.pdf
+*.svg
+*.gif
+*.mp4
+*.webm
+
+# ignore swap files
+*.swp
+
+# ignore VScode stuff
+*.vscode
