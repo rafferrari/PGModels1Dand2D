@@ -1,4 +1,4 @@
-using nuPGCM, PyPlot, PyCall, Printf, SparseArrays, LinearAlgebra, HDF5, Dierckx
+using PGModels1Dand2D, PyPlot, PyCall, Printf, SparseArrays, LinearAlgebra, HDF5, Dierckx
 
 plt.style.use("../../plots.mplstyle")
 close("all")

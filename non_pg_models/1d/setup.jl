@@ -2,7 +2,7 @@
 # Model setup
 ################################################################################
 
-using nuPGCM, PyPlot, PyCall, SpecialFunctions, HDF5, Printf
+using PGModels1Dand2D, PyPlot, PyCall, SpecialFunctions, HDF5, Printf
 
 # libraries
 include("structs.jl")

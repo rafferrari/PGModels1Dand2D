@@ -7,7 +7,7 @@ include("setup.jl")
 
 # plotting stylesheet
 using PyPlot
-plt.style.use("../plots.mplstyle")
+plt.style.use("../../plots.mplstyle")
 close("all")
 pygui(false)
 
@@ -77,15 +77,15 @@ end
 # run
 ################################################################################
 
-m, s = run()
+# m, s = run()
 
 ################################################################################
 # plots
 ################################################################################
 
-# setupFile = string(outFolder, "setup.h5")
-# # stateFiles = string.(outFolder, "state", -1:5, ".h5")
-# stateFiles = string.(outFolder, "state", 0:5, ".h5")
-# profilePlot(setupFile, stateFiles)
+setupFile = string(outFolder, "setup.h5")
+# stateFiles = string.(outFolder, "state", -1:5, ".h5")
+stateFiles = string.(outFolder, "state", 0:5, ".h5")
+profilePlot(setupFile, stateFiles)
 
 println("Done.")
