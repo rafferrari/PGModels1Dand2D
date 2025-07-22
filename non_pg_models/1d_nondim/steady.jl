@@ -1,9 +1,9 @@
 """
-    A, rhs = getMatrices()   
+    A, rhs = getSteadyMatrices()   
 
-Compute matrices for 1D equations.
+Compute matrices for canonical steady state.
 """
-function getMatrices()
+function getSteadyMatrices()
     nVars = 3
     nPts = nVars*nz̃
 
@@ -24,6 +24,7 @@ function getMatrices()
         # eqtn 1: -ṽ - S*b̃ - dz̃(ν*dz̃(ũ)) = 0 
         row = umap[1, j]
         push!(A, (row, umap[2, j],   -1.0))
+        push!(A, (row, umap[3, j],   -S))
         push!(A, (row, umap[1, j-1], -(ν_z̃*fd_z̃[1] + ν[j]*fd_z̃z̃[1])))
         push!(A, (row, umap[1, j],   -(ν_z̃*fd_z̃[2] + ν[j]*fd_z̃z̃[2])))
         push!(A, (row, umap[1, j+1], -(ν_z̃*fd_z̃[3] + ν[j]*fd_z̃z̃[3])))
@@ -51,7 +52,7 @@ function getMatrices()
     # ṽ = 0
     row = umap[2, 1] 
     push!(A, (row, row, 1.0))
-    # dz̃(b) = -1
+    # dz̃(b) = -N^2
     row = umap[3, 1] 
     fd_z̃ = mkfdstencil(z̃[1:3], z̃[1], 1)
     push!(A, (row, umap[3, 1], fd_z̃[1]))
@@ -83,7 +84,7 @@ function getMatrices()
 end
 
 """
-    b = steadyState()
+    b̃ = steadyState()
 
 Compute canonical steady state.
 """
@@ -96,14 +97,14 @@ function steadyState()
     umap = reshape(1:nPts, nVars, nz̃)
 
     # get matrices and vectors
-    A, rhs = getMatrices()
+    A, rhs = getSteadyMatrices()
 
     # boundaries
     rhs[umap[1, 1]]  = 0  # u = 0 bot
     rhs[umap[1, nz̃]] = 0  # u decay top
     rhs[umap[2, 1]]  = 0  # v = 0 bot
     rhs[umap[2, nz̃]] = 0  # v decay top
-    rhs[umap[3, 1]]  = -1 # b flux bot
+    rhs[umap[3, 1]]  = -N^2 # b flux bot
     rhs[umap[3, nz̃]] = 0  # b flux top
 
     # solve
@@ -116,7 +117,7 @@ function steadyState()
     b̃ = sol[3, :]
 
     # save data
-    saveCheckpointRot(b̃, ũ, ṽ, -1, -42, 999)
+    saveCheckpoint1DTCNondim(ũ, ṽ, b̃, 0, Inf, Inf)
 
-    return b
+    return b̃
 end

@@ -1,26 +1,30 @@
-################################################################################
-# Functions useful for plotting
-################################################################################
+using PyPlot
+using PyCall
+
+plt.style.use(joinpath(@__DIR__, "../../plots.mplstyle"))
+close("all")
+pygui(false)
 
 pl = pyimport("matplotlib.pylab")
 inset_locator = pyimport("mpl_toolkits.axes_grid1.inset_locator")
+pc = 1/6 # pica
 
 """
     profilePlot(datafiles)
 
 Plot profiles from HDF5 snapshot files the `datafiles` list.
 """
-function profilePlot(datafiles; fname="profiles.png")
+function profilePlot(datafiles; fname=joinpath(out_dir, "profiles.png"))
     # init plot
-    fig, ax = subplots(1, 3, figsize=(6.5, 2), sharey=true)
+    fig, ax = subplots(1, 3, figsize=(33pc, 33pc*1.62/3), sharey=true)
 
 
-    ax[1].set_xlabel(L"cross-slope flow, $\tilde{u}$")
-    ax[1].set_ylabel(L"$\tilde{z}$")
+    ax[1].set_xlabel(L"Cross-slope flow $\tilde{u}$")
+    ax[1].set_ylabel(L"Vertical coordinate $\tilde{z}$")
 
-    ax[2].set_xlabel(L"along-slope flow, $\tilde{v}$")
+    ax[2].set_xlabel(L"Along-slope flow $\tilde{v}$")
 
-    ax[3].set_xlabel(L"stratification, $\partial_{\tilde z} \tilde b$")
+    ax[3].set_xlabel(L"Stratification $N^2 + \partial_{\tilde z} \tilde b$")
 
     subplots_adjust(bottom=0.2, top=0.9, left=0.1, right=0.9, wspace=0.2, hspace=0.6)
 
@@ -43,9 +47,13 @@ function profilePlot(datafiles; fname="profiles.png")
         b̃z̃ = differentiate(c.b̃, c.z̃)
 
         # colors and labels
-        label = string(L"$\tilde{t}/\tilde{\tau}_A$ = ", Int64(round(c.t̃/τ_A)))
+        if c.t̃ == Inf
+            label = "Steady state"
+        else
+            label = string(L"$\tilde{t}/\tilde{\tau}_A$ = ", Int64(round(c.t̃/τ_A)))
+        end
         if i == 1
-            color = "k"
+            color = "r"
         else
             color = colors[i-1, :]
         end
@@ -53,10 +61,11 @@ function profilePlot(datafiles; fname="profiles.png")
         # plot
         ax[1].plot(c.ũ,  c.z̃, c=color)
         ax[2].plot(c.ṽ,  c.z̃, c=color)
-        ax[2].axvline(c.P̃x̃, lw=1.0, c=color, ls="--")
-        ax[3].plot(b̃z̃,   c.z̃, c=color, label=label)
+        ax[2].axvline(c.P̃x̃, lw=1.0, c=color, ls="--", label=(i == length(datafiles) ? L"\partial_{\tilde x} \tilde P" : ""))
+        ax[3].plot(N^2 .+ b̃z̃,   c.z̃, c=color, label=label)
     end
 
+    ax[2].legend()
     ax[3].legend()
 
     savefig(fname)

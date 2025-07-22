@@ -1,8 +1,5 @@
-################################################################################
-# Utility functions for nondimensional transport-constrained 1D model
-################################################################################
-
 using Printf
+using HDF5
 
 """
     saveCheckpoint1DTCNondim(ũ, ṽ, b̃, P̃x̃, t̃, i)
@@ -10,7 +7,7 @@ using Printf
 Save .h5 checkpoint file for state.
 """
 function saveCheckpoint1DTCNondim(ũ, ṽ, b̃, P̃x̃, t̃, i)
-    savefile = @sprintf("checkpoint%d.h5", i)
+    savefile = joinpath(out_dir, @sprintf("checkpoint%03d.h5", i))
     file = h5open(savefile, "w")
     write(file, "ũ", ũ)
     write(file, "ṽ", ṽ)

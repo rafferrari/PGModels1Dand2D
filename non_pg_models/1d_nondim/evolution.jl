@@ -1,3 +1,6 @@
+using SparseArrays
+using LinearAlgebra
+
 """
     A, diffVec = getRHS()   
 
