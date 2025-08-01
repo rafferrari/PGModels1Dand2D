@@ -10,6 +10,7 @@
 *.pvd
 *.out
 *.err
+*.jld2 
 
 # ignore images and videos
 *.png

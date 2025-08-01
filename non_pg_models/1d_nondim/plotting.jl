@@ -1,5 +1,6 @@
 using PyPlot
 using PyCall
+using JLD2
 
 plt.style.use(joinpath(@__DIR__, "../../plots.mplstyle"))
 close("all")
@@ -10,11 +11,11 @@ inset_locator = pyimport("mpl_toolkits.axes_grid1.inset_locator")
 pc = 1/6 # pica
 
 """
-    profilePlot(datafiles)
+    profile_plot(datafiles)
 
-Plot profiles from HDF5 snapshot files the `datafiles` list.
+Plot profiles from JLD2 snapshot files in the `datafiles` list.
 """
-function profilePlot(datafiles; fname=joinpath(out_dir, "profiles.png"))
+function profile_plot(datafiles; fname=joinpath(out_dir, "profiles.png"))
     # init plot
     fig, ax = subplots(1, 3, figsize=(33pc, 33pc*1.62/3), sharey=true)
 
@@ -41,16 +42,25 @@ function profilePlot(datafiles; fname=joinpath(out_dir, "profiles.png"))
     # plot data from `datafiles`
     for i ∈ eachindex(datafiles)
         # load
-        c = loadCheckpoint1DTCNondim(datafiles[i])
+        d = jldopen(datafiles[i], "r")
+        u = d["u"]
+        v = d["v"]
+        b = d["b"]
+        Px = d["Px"]
+        t = d["t"]
+        model = d["model"]
+        close(d)
+        z = model.z
+        N = model.N
 
         # stratification
-        b̃z̃ = differentiate(c.b̃, c.z̃)
+        bz = differentiate(b, z)
 
         # colors and labels
-        if c.t̃ == Inf
+        if t == Inf
             label = "Steady state"
         else
-            label = string(L"$\tilde{t}/\tilde{\tau}_A$ = ", Int64(round(c.t̃/τ_A)))
+            label = string(L"$\tilde{t}/\tau_A$ = ", Int64(round(t/τ_A)))
         end
         if i == 1
             color = "r"
@@ -59,10 +69,10 @@ function profilePlot(datafiles; fname=joinpath(out_dir, "profiles.png"))
         end
 
         # plot
-        ax[1].plot(c.ũ,  c.z̃, c=color)
-        ax[2].plot(c.ṽ,  c.z̃, c=color)
-        ax[2].axvline(c.P̃x̃, lw=1.0, c=color, ls="--", label=(i == length(datafiles) ? L"\partial_{\tilde x} \tilde P" : ""))
-        ax[3].plot(N^2 .+ b̃z̃,   c.z̃, c=color, label=label)
+        ax[1].plot(u, z, c=color)
+        ax[2].plot(v, z, c=color)
+        ax[2].axvline(Px, lw=1.0, c=color, ls="--", label=(i == length(datafiles) ? L"\partial_{\tilde x} \tilde P" : ""))
+        ax[3].plot(N^2 .+ bz,  z, c=color, label=label)
     end
 
     ax[2].legend()
