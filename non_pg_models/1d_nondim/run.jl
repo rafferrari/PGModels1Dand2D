@@ -30,10 +30,11 @@ N = 1 # background stratification
 Δt = minimum([τ_S/100, τ_A/100])
 
 # number of grid points
-nz = 2^11 # good for anything at or below τ_S = 1e4
+nz = 2^10
 
 # grid (chebyshev, z = 0 is bottom)
-z = @. H*(1 - cos(pi*(0:nz-1)/(nz-1)))/2
+# z = @. H*(1 - cos(pi*(0:nz-1)/(nz-1)))/2
+z = range(0, H, nz)
 
 # bottom enhanced:
 # ν0 = 1e-1
@@ -50,6 +51,11 @@ z = @. H*(1 - cos(pi*(0:nz-1)/(nz-1)))/2
 h = 1
 ν = @. ν0 + ν1*exp(-z/h)
 κ = @. κ0 + κ1*exp(-z/h)
+
+# for BT12 mixing scheme
+BT12 = true
+BT12_debug = true
+κ_b = 10*κ0
 
 # store in model
 model = Model(S, v₀, N, Δt, z, ν, κ; canonical)

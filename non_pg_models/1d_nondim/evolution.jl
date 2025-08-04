@@ -210,12 +210,12 @@ function evolve(model::Model; t_final, t_save)
     # start with far-field geostrophic flow
     sol[imap[2, :]] .= v₀
     sol[ndof] = v₀
+    u = @view sol[imap[1, :]]
+    v = @view sol[imap[2, :]]
+    b = @view sol[imap[3, :]]
+    Px = @view sol[ndof]
 
     # save initial condition
-    u = sol[imap[1, :]]
-    v = sol[imap[2, :]]
-    b = sol[imap[3, :]]
-    Px = sol[ndof]
     ofile = joinpath(out_dir, @sprintf("checkpoint%03d.jld2", 0))
     jldsave(ofile; u, v, b, Px, t, model)
     @info "Saved checkpoint to '$ofile'"
@@ -225,31 +225,93 @@ function evolve(model::Model; t_final, t_save)
     for i=1:n_steps
         t += Δt
 
-        # if model.κ changes, rebuild the linear system
-        # LHS, RHS, rhs = build_linear_system(model)
+        if BT12 # Benthusyen and Thomas 2012 mixing scheme
+            # update ν, κ based on current state
+            model = set_ν_κ_BT12!(model, u, v, b, z)
+
+            # rebuild the linear system with updated mixing coefficients
+            LHS, RHS, rhs = build_linear_system(model)
+
+            # debug
+            if i % 10 == 0 && BT12_debug
+                plot_κ_stratification(model, b; i)
+            end
+        end
 
         # solve linear system
         ldiv!(sol, LHS, RHS*sol + rhs)
 
         # log
         if i % n_save == 0
-            # gather solution
-            u = sol[imap[1, :]]
-            v = sol[imap[2, :]]
-            b = sol[imap[3, :]]
-            Px = sol[ndof]
-
             # save data
             ofile = joinpath(out_dir, @sprintf("checkpoint%03d.jld2", i_save))
             jldsave(ofile; u, v, b, Px, t, model)
-            @info "Saved checkpoint to '$ofile'"
+            @info "Saved '$ofile'"
             i_save += 1
         end
     end
 
-    u = sol[imap[1, :]]
-    v = sol[imap[2, :]]
-    b = sol[imap[3, :]]
-    Px = sol[ndof]
     return u, v, b, Px
+end
+
+function set_ν_κ_BT12!(model, u, v, b, z)
+    du_dz = differentiate(u, z)
+    dv_dz = differentiate(v, z)
+    db_dz = differentiate(b, z)
+
+    # Richardson number
+    Ri = (N^2 .+ db_dz) ./ (du_dz.^2 .+ dv_dz.^2 .+ 1e-12)
+
+    # Benthusyen and Thomas 2012 mixing scheme
+    κ_new = similar(model.κ)
+    nz = length(z)
+    for j in 1:nz
+        if Ri[j] <= 0.2
+            κ_new[j] = κ_b
+        elseif Ri[j] < 0.3
+            κ_new[j] = 10 * (model.κ[j] - κ_b) * (Ri[j] - 0.2) + κ_b
+        else
+            κ_new[j] = model.κ[j]
+        end
+    end
+
+    # smooth κ_new with a 5-point moving average
+    κ_smooth = copy(κ_new)
+    for j in 3:nz-2
+        κ_smooth[j] = (κ_new[j-2] + κ_new[j-1] + κ_new[j] + κ_new[j+1] + κ_new[j+2]) / 5
+    end
+    # keep boundaries unsmoothed
+    κ_smooth[1] = κ_new[1]
+    κ_smooth[2] = κ_new[2]
+    κ_smooth[nz-1] = κ_new[nz-1]
+    κ_smooth[nz] = κ_new[nz]
+
+    # set ν, κ in model
+    model.ν .= κ_smooth
+    model.κ .= κ_smooth
+
+    return model
+end
+
+function plot_κ_stratification(model, b; i=0)
+    # unpack
+    z = model.z
+    κ = model.κ
+
+    # init plot
+    fig, ax = subplots(1, 2, figsize=(4, 3.2), sharey=true)
+    ax[1].set_xlabel(L"Diffusivity $\tilde{\kappa}$")
+    ax[2].set_xlabel(L"Stratification $N^2 + \partial_\tilde{z} \tilde{b}$")
+    ax[1].set_ylabel(L"Vertical coordinate $\tilde{z}$")
+
+    # plot
+    ax[1].plot(κ, z)
+    db_dz = differentiate(b, z)
+    ax[2].plot(N^2 .+ db_dz, z)
+    
+    # save figure
+    fname = joinpath(out_dir, @sprintf("kappa_strat%04d.png", i))
+    savefig(fname)
+    @info "Saved '$fname'"
+    plt.close()
 end

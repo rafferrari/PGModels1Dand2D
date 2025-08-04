@@ -40,5 +40,8 @@ function Model(S, v₀, N, Δt, z, ν, κ; canonical=false)
     # make sure S, N, v₀, and Δt̃ are same type
     S, N, v₀, Δt = promote(S, N, v₀, Δt)
 
+    # make sure z, ν, and κ are same type
+    z = collect(z)
+
     return Model(S, N, v₀, Δt, z, ν, κ, canonical)
 end
