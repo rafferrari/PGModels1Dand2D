@@ -102,7 +102,7 @@ function build_linear_system(model::Model)
         add_to_CN_matrices!(LHS, RHS, row, imap[2, j],   ν_z*fd_z[2] + ν[j]*fd_zz[2])
         add_to_CN_matrices!(LHS, RHS, row, imap[2, j+1], ν_z*fd_z[3] + ν[j]*fd_zz[3])
 
-        # 3rd eqtn: b_t = -u + [κ*(1 + b_z)]_z
+        # 3rd eqtn: b_t = -u + [κ*(1 + b_z)]_z -r*b
         row = imap[3, j]
         # time derivative
         add_to_matrix!(LHS, row, row, 1/Δt)
@@ -114,6 +114,8 @@ function build_linear_system(model::Model)
         add_to_CN_matrices!(LHS, RHS, row, imap[3, j],   (κ_z*fd_z[2] + κ[j]*fd_zz[2]))
         add_to_CN_matrices!(LHS, RHS, row, imap[3, j+1], (κ_z*fd_z[3] + κ[j]*fd_zz[3]))
         rhs[row] = N^2*κ_z
+        # third term
+        add_to_CN_matrices!(LHS, RHS, row, imap[3, j], -r)
     end
 
     # Boundary Conditions: Bottom
@@ -233,7 +235,7 @@ function evolve(model::Model; t_final, t_save)
             LHS, RHS, rhs = build_linear_system(model)
 
             # debug
-            if i % 10 == 0 && BT12_debug
+            if i % BT12_interval == 0 && BT12_debug
                 plot_κ_stratification(model, b; i)
             end
         end
@@ -247,6 +249,8 @@ function evolve(model::Model; t_final, t_save)
             ofile = joinpath(out_dir, @sprintf("checkpoint%03d.jld2", i_save))
             jldsave(ofile; u, v, b, Px, t, model)
             @info "Saved '$ofile'"
+            # Save profile plot for this checkpoint
+            profile_plot([ofile]; fname=replace(ofile, ".jld2" => ".png"))
             i_save += 1
         end
     end
@@ -277,13 +281,16 @@ function set_ν_κ_BT12!(model, u, v, b, z)
 
     # smooth κ_new with a 5-point moving average
     κ_smooth = copy(κ_new)
-    for j in 3:nz-2
-        κ_smooth[j] = (κ_new[j-2] + κ_new[j-1] + κ_new[j] + κ_new[j+1] + κ_new[j+2]) / 5
+    #for j in 3:nz-2
+    #    κ_smooth[j] = (κ_new[j-2] + κ_new[j-1] + κ_new[j] + κ_new[j+1] + κ_new[j+2]) / 5
+    #end
+    for j in 2:nz-1
+        κ_smooth[j] = (0.5*κ_new[j-1] + κ_new[j] + 0.5*κ_new[j+1]) / 2
     end
     # keep boundaries unsmoothed
     κ_smooth[1] = κ_new[1]
-    κ_smooth[2] = κ_new[2]
-    κ_smooth[nz-1] = κ_new[nz-1]
+    #κ_smooth[2] = κ_new[2]
+    #κ_smooth[nz-1] = κ_new[nz-1]
     κ_smooth[nz] = κ_new[nz]
 
     # set ν, κ in model
